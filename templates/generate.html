@@ -1,0 +1,132 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Cropper for segmentation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #image, #mask, #transparent {
+            width: 600px;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<form class="flex justify-between p-2"  method="post">
+    {% csrf_token %}
+    <input type="hidden" name="data" id="data">
+    <span id="changeDetectionInfo"></span>
+    <input type="submit" class="border-2 border-red-500 hover:bg-red-200  px-4 py-1 rounded" value="Generate">
+</form>
+
+<div class="grid grid-cols-3 mt-8 p-8">
+    <div class="img-container">
+        <img src="{{ model.original_image.url }}" id="image">
+    </div>
+    <div class="img-container">
+        <img src="{{ model.mask_image.url }}" id="mask">
+    </div>
+
+    <div class="img-container">
+        <img src="{{ model.transparent_image.url }}" id="transparent">
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+
+<script>
+    // Image containers
+    const containers = document.querySelectorAll('.img-container');
+    const data = document.getElementById('data');
+
+    // Images
+    const image = document.getElementById('image');
+    const mask = document.getElementById('mask');
+    const transparent = document.getElementById('transparent');
+
+    const changeDetectionInfo = document.getElementById('changeDetectionInfo');
+
+    // Cropper instances
+    let imageCropper = null;
+    let maskCropper = null;
+    let transparentCropper = null;
+
+    let lastData = null;
+    let syncing = false;
+
+    // Function to sync coordinates between Cropper instances
+    function syncCropperCoordinates(fromCropper,  toCropperA, toCropperB) {
+        lastData = fromCropper.getData();
+        if (!fromCropper || !toCropperA || !toCropperB) {
+            return;
+        }
+
+        if (syncing) {
+            return
+        }
+
+        setTimeout(() => {
+            syncing = false;
+            if (lastData.x < 0 && lastData.y < 0) {
+                lastData.x = 0;
+                lastData.y = 0;
+            }
+
+            lastData.x = Math.round(lastData.x);
+            lastData.y = Math.round(lastData.y);
+            lastData.width = Math.round(lastData.width);
+            lastData.height = Math.round(lastData.height);
+            toCropperA.setData(lastData);
+            toCropperB.setData(lastData);
+            data.value = JSON.stringify(lastData);
+
+            changeDetectionInfo.innerHTML = `X: ${lastData.x}, Y: ${lastData.y} w: ${lastData.width} h: ${lastData.height}`;
+        }, 10)
+
+        syncing = true;
+    }
+
+    function initCropper(element, cropperType) {
+        const cropper = new Cropper(element, {
+            movable: false,
+            zoomable: false,
+            crop: function () {
+                if (cropperType === 'image') {
+                    syncCropperCoordinates(cropper, maskCropper, transparentCropper);
+                } else if (cropperType === 'mask') {
+                    syncCropperCoordinates(cropper, imageCropper, transparentCropper);
+                } else if (cropperType ==='transparent') {
+                    syncCropperCoordinates(cropper, imageCropper, maskCropper);
+                }
+
+            }
+        });
+
+        if (cropperType === 'image') {
+            imageCropper = cropper;
+        } else if (cropperType === 'mask') {
+            maskCropper = cropper;
+        } else if (cropperType === 'transparent') {
+            transparentCropper = cropper;
+        }
+    }
+
+    containers[0].style.width = image.offsetWidth + 'px';
+    containers[0].style.height = image.offsetHeight + 'px';
+    initCropper(image, 'image');
+
+    containers[1].style.maxWidth = mask.offsetWidth + 'px';
+    containers[1].style.maxHeight = mask.offsetHeight + 'px';
+    initCropper(mask, 'mask');
+
+    containers[2].style.maxWidth = transparent.offsetWidth + 'px';
+    containers[2].style.maxHeight = transparent.offsetHeight + 'px';
+    initCropper(transparent, 'transparent');
+
+</script>
+</body>
+</html>
