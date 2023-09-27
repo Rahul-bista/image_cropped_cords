@@ -115,6 +115,8 @@ def generate(request):
         original_cropped.save(f'out/im/{filename}.jpg')
         mask_cropped.save(f'out/gt/{filename}.png')
 
+        return redirect(f'{request.path}?key={key}')
+
     return render(request, 'generate.html', {
         'model': model
     })
