@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Cropper with Change Detection</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+</head>
+<body>
+    <input type="file" id="inputImage" accept="image/*">
+    <div>
+        <img id="image" src="" alt="Selected Image" width="800" height="200">
+    </div>
+    <button id="cropButton">Crop</button>
+    <div id="changeDetectionInfo">No change detected yet.</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script>
+        const inputImage = document.getElementById('inputImage');
+        const image = document.getElementById('image');
+        const cropButton = document.getElementById('cropButton');
+        const changeDetectionInfo = document.getElementById('changeDetectionInfo');
+        let croppedData;
+
+        let cropper;
+
+        inputImage.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = (event) => {
+                image.src = event.target.result;
+                cropper = new Cropper(image, {
+                    //aspectRatio: 1, // You can adjust the aspect ratio as needed
+                    viewMode: 1,
+                    crop: function() {
+                        croppedData = cropper.getData();
+                        changeDetectionInfo.innerHTML = `X: ${croppedData.x}, Y: ${croppedData.y}`;
+                    }
+                });
+            };
+
+            reader.readAsDataURL(file);
+        });
+
+        cropButton.addEventListener('click', () => {
+            const croppedData = cropper.getData();
+            alert(`X: ${croppedData.x}, Y: ${croppedData.y}`);
+        });
+    </script>
+</body>
+</html>
